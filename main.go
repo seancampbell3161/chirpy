@@ -18,11 +18,22 @@ func middlewareCORS(next http.Handler) http.Handler {
 	})
 }
 
+func statusHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Status-URI", "200")
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		return
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
 	corsMux := middlewareCORS(mux)
 
-	mux.Handle("/", http.FileServer(http.Dir("")))
+	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(""))))
+
+	mux.HandleFunc("/healthz", statusHandler)
 
 	server := &http.Server{
 		Handler: corsMux,
