@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
@@ -50,15 +51,26 @@ func (cfg *apiConfig) getNumOfHitsHandler(w http.ResponseWriter, req *http.Reque
 }
 
 func main() {
-	mux := http.NewServeMux()
+	//mux := http.NewServeMux()
 	myConfig := apiConfig{fileServerHits: 0}
+	r := chi.NewRouter()
 
-	mux.Handle("/app/", myConfig.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
+	//r.Handle("/app/", myConfig.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
+	fsHandler := myConfig.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+	r.Handle("/app", fsHandler)
+	r.Handle("/app/*", fsHandler)
 
-	mux.HandleFunc("/healthz", statusHandler)
-	mux.HandleFunc("/metrics", myConfig.getNumOfHitsHandler)
+	//r.HandleFunc("/healthz", statusHandler)
+	//r.HandleFunc("/metrics", myConfig.getNumOfHitsHandler)
 
-	corsMux := middlewareCORS(mux)
+	apiRouter := chi.NewRouter()
+
+	apiRouter.Get("/healthz", statusHandler)
+	apiRouter.Get("/metrics", myConfig.getNumOfHitsHandler)
+
+	r.Mount("/api/", apiRouter)
+
+	corsMux := middlewareCORS(r)
 
 	server := &http.Server{
 		Handler: corsMux,
