@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"log"
 	"net/http"
 )
 
@@ -60,6 +62,61 @@ func (cfg *apiConfig) getNumOfHitsHandler(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
+	type parameters struct {
+		Body string `json:"body"`
+	}
+
+	type validResp struct {
+		Valid bool `json:"valid"`
+	}
+
+	type errorResp struct {
+		Error string `json:"error"`
+	}
+
+	decoder := json.NewDecoder(request.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		writer.WriteHeader(500)
+		respBody := errorResp{
+			Error: "Something went wrong",
+		}
+		data, err := json.Marshal(respBody)
+		if err != nil {
+			log.Printf("Error marshalling response: %s", err)
+		}
+		_, err = writer.Write(data)
+		return
+	}
+
+	if len(params.Body) > 140 {
+		writer.WriteHeader(400)
+		badChirpResp := errorResp{
+			Error: "Chirp is too long",
+		}
+		data, err := json.Marshal(badChirpResp)
+		if err != nil {
+			return
+		}
+		_, err = writer.Write(data)
+	} else {
+		respBody := validResp{
+			Valid: true,
+		}
+		data, err := json.Marshal(respBody)
+		if err != nil {
+			log.Printf("Error marshalling response: %s", err)
+			writer.WriteHeader(500)
+			return
+		}
+		writer.WriteHeader(200)
+		writer.Header().Set("Content-Type", "application/json")
+		_, err = writer.Write(data)
+	}
+}
+
 func main() {
 	//mux := http.NewServeMux()
 	myConfig := apiConfig{fileServerHits: 0}
@@ -75,6 +132,7 @@ func main() {
 
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", statusHandler)
+	apiRouter.Post("/validate_chirp", validateChirpHandler)
 
 	adminRouter := chi.NewRouter()
 	adminRouter.Get("/metrics", myConfig.getNumOfHitsHandler)
