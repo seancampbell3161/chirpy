@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type apiConfig struct {
@@ -62,13 +63,30 @@ func (cfg *apiConfig) getNumOfHitsHandler(w http.ResponseWriter, req *http.Reque
 	}
 }
 
+func getBadWords() []string {
+	return []string{
+		"kerfuffle",
+		"sharbert",
+		"fornax",
+	}
+}
+
+func contains(slice []string, word string) bool {
+	for _, item := range slice {
+		if item == word {
+			return true
+		}
+	}
+	return false
+}
+
 func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
 	type parameters struct {
 		Body string `json:"body"`
 	}
 
 	type validResp struct {
-		Valid bool `json:"valid"`
+		Cleaned_body string `json:"cleaned_body"`
 	}
 
 	type errorResp struct {
@@ -102,8 +120,15 @@ func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 		_, err = writer.Write(data)
 	} else {
+		result := &params.Body
+		badWords := getBadWords()
+		for _, word := range strings.Split(params.Body, " ") {
+			if contains(badWords, strings.ToLower(word)) {
+				*result = strings.Replace(*result, word, "****", -1)
+			}
+		}
 		respBody := validResp{
-			Valid: true,
+			Cleaned_body: *result,
 		}
 		data, err := json.Marshal(respBody)
 		if err != nil {
