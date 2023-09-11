@@ -40,11 +40,21 @@ func (cfg *apiConfig) middlewareMetrics(next http.Handler) http.Handler {
 }
 
 func (cfg *apiConfig) getNumOfHitsHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Status-URI", "200")
 
-	numOfHits := fmt.Sprintf("Hits: %d", cfg.fileServerHits)
-	_, err := w.Write([]byte(numOfHits))
+	htmlTemplate := `
+		<html>
+		
+		<body>
+		<h1>Welcome, Chirpy Admin</h1>
+		<p>Chirpy has been visited %d times!</p>
+		</body>
+		
+		</html>
+	`
+	formattedTemplate := fmt.Sprintf(htmlTemplate, cfg.fileServerHits)
+	_, err := w.Write([]byte(formattedTemplate))
 	if err != nil {
 		return
 	}
@@ -64,11 +74,13 @@ func main() {
 	//r.HandleFunc("/metrics", myConfig.getNumOfHitsHandler)
 
 	apiRouter := chi.NewRouter()
-
 	apiRouter.Get("/healthz", statusHandler)
-	apiRouter.Get("/metrics", myConfig.getNumOfHitsHandler)
+
+	adminRouter := chi.NewRouter()
+	adminRouter.Get("/metrics", myConfig.getNumOfHitsHandler)
 
 	r.Mount("/api/", apiRouter)
+	r.Mount("/admin", adminRouter)
 
 	corsMux := middlewareCORS(r)
 
