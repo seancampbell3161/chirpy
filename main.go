@@ -1,166 +1,39 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/seancampbell3161/chirpy/internal/database"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type apiConfig struct {
 	fileServerHits int
-}
-
-func middlewareCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		if req.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, req)
-	})
-}
-
-func statusHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Status-URI", "200")
-	_, err := w.Write([]byte("OK"))
-	if err != nil {
-		return
-	}
-}
-
-func (cfg *apiConfig) middlewareMetrics(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		cfg.fileServerHits++
-		next.ServeHTTP(w, req)
-	})
-}
-
-func (cfg *apiConfig) getNumOfHitsHandler(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Status-URI", "200")
-
-	htmlTemplate := `
-		<html>
-		
-		<body>
-		<h1>Welcome, Chirpy Admin</h1>
-		<p>Chirpy has been visited %d times!</p>
-		</body>
-		
-		</html>
-	`
-	formattedTemplate := fmt.Sprintf(htmlTemplate, cfg.fileServerHits)
-	_, err := w.Write([]byte(formattedTemplate))
-	if err != nil {
-		return
-	}
-}
-
-func getBadWords() []string {
-	return []string{
-		"kerfuffle",
-		"sharbert",
-		"fornax",
-	}
-}
-
-func contains(slice []string, word string) bool {
-	for _, item := range slice {
-		if item == word {
-			return true
-		}
-	}
-	return false
-}
-
-func validateChirpHandler(writer http.ResponseWriter, request *http.Request) {
-	type parameters struct {
-		Body string `json:"body"`
-	}
-
-	type validResp struct {
-		Cleaned_body string `json:"cleaned_body"`
-	}
-
-	type errorResp struct {
-		Error string `json:"error"`
-	}
-
-	decoder := json.NewDecoder(request.Body)
-	params := parameters{}
-	err := decoder.Decode(&params)
-	if err != nil {
-		writer.WriteHeader(500)
-		respBody := errorResp{
-			Error: "Something went wrong",
-		}
-		data, err := json.Marshal(respBody)
-		if err != nil {
-			log.Printf("Error marshalling response: %s", err)
-		}
-		_, err = writer.Write(data)
-		return
-	}
-
-	if len(params.Body) > 140 {
-		writer.WriteHeader(400)
-		badChirpResp := errorResp{
-			Error: "Chirp is too long",
-		}
-		data, err := json.Marshal(badChirpResp)
-		if err != nil {
-			return
-		}
-		_, err = writer.Write(data)
-	} else {
-		result := &params.Body
-		badWords := getBadWords()
-		for _, word := range strings.Split(params.Body, " ") {
-			if contains(badWords, strings.ToLower(word)) {
-				*result = strings.Replace(*result, word, "****", -1)
-			}
-		}
-		respBody := validResp{
-			Cleaned_body: *result,
-		}
-		data, err := json.Marshal(respBody)
-		if err != nil {
-			log.Printf("Error marshalling response: %s", err)
-			writer.WriteHeader(500)
-			return
-		}
-		writer.WriteHeader(200)
-		writer.Header().Set("Content-Type", "application/json")
-		_, err = writer.Write(data)
-	}
+	DB             *database.DB
 }
 
 func main() {
-	//mux := http.NewServeMux()
-	myConfig := apiConfig{fileServerHits: 0}
+	db, err := database.NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	appConfig := apiConfig{
+		fileServerHits: 0,
+		DB:             db,
+	}
 	r := chi.NewRouter()
 
-	//r.Handle("/app/", myConfig.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
-	fsHandler := myConfig.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+	fsHandler := appConfig.middlewareMetrics(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
 	r.Handle("/app", fsHandler)
 	r.Handle("/app/*", fsHandler)
 
-	//r.HandleFunc("/healthz", statusHandler)
-	//r.HandleFunc("/metrics", myConfig.getNumOfHitsHandler)
-
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", statusHandler)
-	apiRouter.Post("/validate_chirp", validateChirpHandler)
+	apiRouter.Post("/chirps", appConfig.newChirpHandler)
 
 	adminRouter := chi.NewRouter()
-	adminRouter.Get("/metrics", myConfig.getNumOfHitsHandler)
+	adminRouter.Get("/metrics", appConfig.getNumOfHitsHandler)
 
 	r.Mount("/api/", apiRouter)
 	r.Mount("/admin", adminRouter)
@@ -171,7 +44,7 @@ func main() {
 		Handler: corsMux,
 		Addr:    ":8080",
 	}
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		fmt.Println(err)
 		return
