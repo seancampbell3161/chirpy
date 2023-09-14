@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/json"
 	"errors"
-	"math/rand"
 	"os"
 	"sync"
 )
@@ -17,8 +16,8 @@ type DBStructure struct {
 }
 
 type Chirp struct {
-	ID   int    `json:"id"`
 	Body string `json:"body"`
+	ID   int    `json:"id"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -36,18 +35,19 @@ func NewDB(path string) (*DB, error) {
 }
 
 func (db *DB) CreateChirp(msg string) (Chirp, error) {
-	perm := os.FileMode(0777)
-	randNum := rand.Intn(1000)
-	chirp := Chirp{randNum, msg}
-
-	data, err := json.Marshal(chirp)
+	dbStructure, err := db.loadDB()
 	if err != nil {
 		return Chirp{}, err
 	}
-	err = os.WriteFile(db.path, []byte(data), perm)
+	id := len(dbStructure.Chirps) + 1
+	chirp := Chirp{msg, id}
+	dbStructure.Chirps[id] = chirp
+
+	err = db.writeDB(dbStructure)
 	if err != nil {
-		return Chirp{}, errors.New("Error creating Chirp")
+		return Chirp{}, err
 	}
+
 	return chirp, nil
 }
 
@@ -56,9 +56,10 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var chirps []Chirp
 	for _, v := range structure.Chirps {
-		chirps = append(chirps, Chirp{v.ID, v.Body})
+		chirps = append(chirps, Chirp{v.Body, v.ID})
 	}
 
 	return chirps, nil
@@ -86,7 +87,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 		return DBStructure{}, err
 	}
 
-	dbStructure := DBStructure{}
+	dbStructure := DBStructure{make(map[int]Chirp)}
 
 	err = json.Unmarshal(fileBytes, &dbStructure)
 	if err != nil {
@@ -98,7 +99,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 
 func (db *DB) writeDB(dbStructure DBStructure) error {
 	db.mux.Lock()
-	defer db.mux.Lock()
+	defer db.mux.Unlock()
 
 	data, err := json.Marshal(dbStructure)
 	perm := os.FileMode(0600)

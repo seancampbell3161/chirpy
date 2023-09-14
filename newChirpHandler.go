@@ -19,11 +19,6 @@ type errorResp struct {
 	Error string `json:"error"`
 }
 
-type Chirp struct {
-	ID   int    `json:"id"`
-	Body string `json:"body"`
-}
-
 func (cfg *apiConfig) newChirpHandler(writer http.ResponseWriter, request *http.Request) {
 	decoder := json.NewDecoder(request.Body)
 	params := parameters{}
@@ -55,16 +50,13 @@ func (cfg *apiConfig) newChirpHandler(writer http.ResponseWriter, request *http.
 		result := &params.Body
 		result = filterBadWords(result)
 
-		respBody := validResp{
-			Cleaned_body: *result,
-		}
-		data, err := json.Marshal(respBody)
+		chirp, err := cfg.DB.CreateChirp(*result)
 		if err != nil {
-			log.Printf("Error marshalling response: %s", err)
-			writer.WriteHeader(500)
 			return
 		}
-		writer.WriteHeader(200)
+		data, err := json.Marshal(chirp)
+
+		writer.WriteHeader(201)
 		writer.Header().Set("Content-Type", "application/json")
 		_, err = writer.Write(data)
 	}

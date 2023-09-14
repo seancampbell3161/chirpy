@@ -16,6 +16,7 @@ type apiConfig struct {
 func main() {
 	db, err := database.NewDB("database.json")
 	if err != nil {
+		fmt.Println(err)
 		log.Fatal(err)
 	}
 	appConfig := apiConfig{
@@ -30,6 +31,7 @@ func main() {
 
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", statusHandler)
+	apiRouter.Get("/chirps", appConfig.getChirpsHandler)
 	apiRouter.Post("/chirps", appConfig.newChirpHandler)
 
 	adminRouter := chi.NewRouter()
