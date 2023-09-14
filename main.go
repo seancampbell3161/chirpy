@@ -32,6 +32,7 @@ func main() {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", statusHandler)
 	apiRouter.Get("/chirps", appConfig.getChirpsHandler)
+	apiRouter.Get("/chirps/{chirpID}", appConfig.getChirpHandler)
 	apiRouter.Post("/chirps", appConfig.newChirpHandler)
 
 	adminRouter := chi.NewRouter()
