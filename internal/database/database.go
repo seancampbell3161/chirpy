@@ -13,11 +13,17 @@ type DB struct {
 }
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
 }
 
 type Chirp struct {
 	Body string `json:"body"`
 	ID   int    `json:"id"`
+}
+
+type User struct {
+	Email string `json:"email"`
+	ID    int    `json:"id"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -32,6 +38,23 @@ func NewDB(path string) (*DB, error) {
 	}
 
 	return &newDB, nil
+}
+
+func (db *DB) CreateUser(email string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	id := len(dbStructure.Users) + 1
+	user := User{email, id}
+	dbStructure.Users[id] = user
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
 }
 
 func (db *DB) CreateChirp(msg string) (Chirp, error) {
@@ -66,7 +89,7 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 }
 
 func (db *DB) createDB() error {
-	dbStructure := DBStructure{Chirps: make(map[int]Chirp)}
+	dbStructure := DBStructure{Chirps: make(map[int]Chirp), Users: make(map[int]User)}
 	return db.writeDB(dbStructure)
 }
 
@@ -87,7 +110,7 @@ func (db *DB) loadDB() (DBStructure, error) {
 		return DBStructure{}, err
 	}
 
-	dbStructure := DBStructure{make(map[int]Chirp)}
+	dbStructure := DBStructure{make(map[int]Chirp), make(map[int]User)}
 
 	err = json.Unmarshal(fileBytes, &dbStructure)
 	if err != nil {

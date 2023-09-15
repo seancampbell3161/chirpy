@@ -1,11 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/seancampbell3161/chirpy/internal/database"
 	"log"
 	"net/http"
+	"os"
 )
 
 type apiConfig struct {
@@ -14,6 +16,14 @@ type apiConfig struct {
 }
 
 func main() {
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	if *dbg == true {
+		err := os.Remove("database.json")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	db, err := database.NewDB("database.json")
 	if err != nil {
 		fmt.Println(err)
@@ -34,6 +44,7 @@ func main() {
 	apiRouter.Get("/chirps", appConfig.getChirpsHandler)
 	apiRouter.Get("/chirps/{chirpID}", appConfig.getChirpHandler)
 	apiRouter.Post("/chirps", appConfig.newChirpHandler)
+	apiRouter.Post("/users", appConfig.createUserHandler)
 
 	adminRouter := chi.NewRouter()
 	adminRouter.Get("/metrics", appConfig.getNumOfHitsHandler)
