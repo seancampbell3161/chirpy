@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 	"github.com/seancampbell3161/chirpy/internal/database"
 	"log"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 type apiConfig struct {
 	fileServerHits int
 	DB             *database.DB
+	JwtSecret      string
 }
 
 func main() {
@@ -29,9 +31,17 @@ func main() {
 		fmt.Println(err)
 		log.Fatal(err)
 	}
+
+	err = godotenv.Load()
+	if err != nil {
+		return
+	}
+	jwtSecret := os.Getenv("JWT_SECRET")
+
 	appConfig := apiConfig{
 		fileServerHits: 0,
 		DB:             db,
+		JwtSecret:      jwtSecret,
 	}
 	r := chi.NewRouter()
 
