@@ -71,6 +71,27 @@ func (db *DB) GetUserByEmail(email string) (User, error) {
 	return User{}, errors.New("user does not exist")
 }
 
+func (db *DB) UpdateUser(userID int, updatedEmail string, updatedPassword string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	for _, user := range dbStructure.Users {
+		if user.ID == userID {
+			user.Email = updatedEmail
+			user.Password = updatedPassword
+
+			dbStructure.Users[userID] = user
+			err = db.writeDB(dbStructure)
+			if err != nil {
+				return User{}, err
+			}
+			return user, nil
+		}
+	}
+	return User{}, err
+}
+
 func (db *DB) CreateChirp(msg string) (Chirp, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {

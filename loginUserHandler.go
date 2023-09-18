@@ -10,9 +10,15 @@ import (
 )
 
 type userParameters struct {
-	Password           string `json:"password"`
-	Email              string `json:"email"`
-	Expires_in_seconds int    `json:"expires_in_seconds,omitempty"`
+	Password         string `json:"password"`
+	Email            string `json:"email"`
+	ExpiresInSeconds int    `json:"expires_in_seconds,omitempty"`
+}
+
+type userLoginResponse struct {
+	Email string `json:"email"`
+	ID    int    `json:"id"`
+	Token string `json:"token"`
 }
 
 func (cfg *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,11 +42,11 @@ func (cfg *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
 		return
 	} else {
-		token, err := auth.GenerateJWT(user, cfg.JwtSecret, time.Duration(userParams.Expires_in_seconds))
+		token, err := auth.GenerateJWT(user, cfg.JwtSecret, time.Duration(userParams.ExpiresInSeconds))
 		if err != nil {
 			fmt.Println(err)
 		}
-		response := userResponse{user.Email, user.ID, token}
+		response := userLoginResponse{user.Email, user.ID, token}
 		data, err := json.Marshal(response)
 		if err != nil {
 			fmt.Println(err)

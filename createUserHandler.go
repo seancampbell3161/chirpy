@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"golang.org/x/crypto/bcrypt"
+	"fmt"
+	"github.com/seancampbell3161/chirpy/internal/auth"
 	"log"
 	"net/http"
 )
@@ -15,7 +16,6 @@ type userParams struct {
 type userResponse struct {
 	Email string `json:"email"`
 	ID    int    `json:"id"`
-	Token string `json:"token"`
 }
 
 func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -34,24 +34,17 @@ func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) 
 		_, err = w.Write(data)
 		return
 	}
-	userParameters.Password = generateHashedPassword(&userParameters.Password)
+	userParameters.Password = auth.GenerateHashedPassword(&userParameters.Password)
 
 	userResult, err := cfg.DB.CreateUser(userParameters.Email, userParameters.Password)
-	response := userResponse{userResult.Email, userResult.ID, ""}
+	response := userResponse{userResult.Email, userResult.ID}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	data, err := json.Marshal(response)
 	_, err = w.Write(data)
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(500)
 		return
 	}
-}
-
-func generateHashedPassword(password *string) string {
-	data, err := bcrypt.GenerateFromPassword([]byte(*password), 12)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return string(data)
 }
