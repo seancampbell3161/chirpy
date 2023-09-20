@@ -9,12 +9,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 type apiConfig struct {
 	fileServerHits int
 	DB             *database.DB
 	JwtSecret      string
+	AccessExp      time.Duration
+	RefreshExp     time.Duration
 }
 
 func main() {
@@ -42,6 +45,8 @@ func main() {
 		fileServerHits: 0,
 		DB:             db,
 		JwtSecret:      jwtSecret,
+		AccessExp:      time.Hour,
+		RefreshExp:     time.Hour * 24 * 60,
 	}
 	r := chi.NewRouter()
 
@@ -57,6 +62,8 @@ func main() {
 	apiRouter.Post("/users", appConfig.createUserHandler)
 	apiRouter.Put("/users", appConfig.updateUserHandler)
 	apiRouter.Post("/login", appConfig.loginUserHandler)
+	apiRouter.Post("/refresh", appConfig.refreshTokenHandler)
+	apiRouter.Post("revoke", appConfig.revokeRefreshTokenHandler)
 
 	adminRouter := chi.NewRouter()
 	adminRouter.Get("/metrics", appConfig.getNumOfHitsHandler)

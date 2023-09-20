@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/seancampbell3161/chirpy/internal/database"
@@ -27,12 +28,9 @@ func GenerateHashedPassword(password *string) string {
 	return string(data)
 }
 
-func GenerateJWT(user database.User, secret string, expDuration time.Duration) (string, error) {
-	if expDuration == time.Duration(0) {
-		expDuration = time.Hour * 24
-	}
+func GenerateJWT(user database.User, secret string, expDuration time.Duration, tokenIssuer string) (string, error) {
 	claims := jwt.RegisteredClaims{
-		Issuer:    "chirpy",
+		Issuer:    tokenIssuer,
 		IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		ExpiresAt: jwt.NewNumericDate(time.Now().UTC().Add(expDuration)),
 		Subject:   strconv.FormatInt(int64(user.ID), 10),
@@ -43,7 +41,49 @@ func GenerateJWT(user database.User, secret string, expDuration time.Duration) (
 	return token.SignedString(signingSecret)
 }
 
-func ValidateJWT(r *http.Request, secret string) (int, error) {
+func RefreshAccessJWT(r *http.Request, secret string, user database.User, exp time.Duration) (string, error) {
+	tokenString := r.Header.Get("Authorization")
+	tokenString = strings.Split(tokenString, "Bearer ")[1]
+
+	token, err := jwt.ParseWithClaims(tokenString, &userClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil {
+		fmt.Println("parse w claims: ", err)
+		return "", err
+	}
+
+	if iss, err := token.Claims.GetIssuer(); iss != "chirpy-refresh" {
+		if err != nil {
+			fmt.Println("error getting issuer")
+			return "", errors.New("error getting issuer")
+		}
+		fmt.Println("issuer is not valid for refresh")
+		return "", errors.New("issuer not valid for refresh")
+	}
+
+	return GenerateJWT(user, secret, exp, "chirpy-access")
+}
+
+func RevokeRefreshJWT(r *http.Request, secret string) (string, error) {
+	tokenString := r.Header.Get("Authorization")
+	token, err := jwt.ParseWithClaims(tokenString, &userClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	if iss, err := token.Claims.GetIssuer(); iss != "chirpy-refresh" {
+		if err != nil {
+			fmt.Println("issuer is snot valid for revoke")
+			return "", errors.New("issuer not valid for revoke")
+		}
+	}
+	return token.Raw, nil
+}
+
+func ValidateJWT(r *http.Request, secret string, tokenIssuer string) (int, error) {
 	tokenString := r.Header.Get("Authorization")
 	tokenString = strings.Split(tokenString, "Bearer ")[1]
 
@@ -53,6 +93,14 @@ func ValidateJWT(r *http.Request, secret string) (int, error) {
 	if err != nil {
 		fmt.Println(err)
 		return 0, err
+	}
+
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		fmt.Println("Get token issuer: ", err)
+	}
+	if issuer != "chirpy-access" {
+		return 0, errors.New("invalid issuer")
 	}
 
 	stringID, err := token.Claims.GetSubject()

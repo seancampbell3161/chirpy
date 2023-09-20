@@ -8,7 +8,7 @@ import (
 )
 
 func (cfg *apiConfig) updateUserHandler(w http.ResponseWriter, r *http.Request) {
-	userID, err := auth.ValidateJWT(r, cfg.JwtSecret)
+	userID, err := auth.ValidateJWT(r, cfg.JwtSecret, "chirpy-access")
 	if err != nil {
 		w.WriteHeader(401)
 		return

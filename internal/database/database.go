@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"sync"
+	"time"
 )
 
 type DB struct {
@@ -12,8 +13,9 @@ type DB struct {
 	mux  *sync.Mutex
 }
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"users"`
+	Chirps        map[int]Chirp        `json:"chirps"`
+	Users         map[int]User         `json:"users"`
+	RevokedTokens map[string]time.Time `json:"revoked_tokens"`
 }
 
 type Chirp struct {
@@ -58,6 +60,19 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 	return user, nil
 }
 
+func (db *DB) GetUserByID(id int) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	for _, user := range dbStructure.Users {
+		if user.ID == id {
+			return user, nil
+		}
+	}
+	return User{}, errors.New("no matching record for ID")
+}
+
 func (db *DB) GetUserByEmail(email string) (User, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
@@ -68,7 +83,7 @@ func (db *DB) GetUserByEmail(email string) (User, error) {
 			return user, nil
 		}
 	}
-	return User{}, errors.New("user does not exist")
+	return User{}, errors.New("no matching record for email")
 }
 
 func (db *DB) UpdateUser(userID int, updatedEmail string, updatedPassword string) (User, error) {
@@ -123,6 +138,19 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	return chirps, nil
 }
 
+func (db *DB) AddRevokedRefreshToken(tokenString string) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+	dbStructure.RevokedTokens[tokenString] = time.Now().UTC()
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (db *DB) createDB() error {
 	dbStructure := DBStructure{Chirps: make(map[int]Chirp), Users: make(map[int]User)}
 	return db.writeDB(dbStructure)
@@ -145,7 +173,11 @@ func (db *DB) loadDB() (DBStructure, error) {
 		return DBStructure{}, err
 	}
 
-	dbStructure := DBStructure{make(map[int]Chirp), make(map[int]User)}
+	dbStructure := DBStructure{
+		make(map[int]Chirp),
+		make(map[int]User),
+		make(map[string]time.Time),
+	}
 
 	err = json.Unmarshal(fileBytes, &dbStructure)
 	if err != nil {
