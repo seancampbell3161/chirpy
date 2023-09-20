@@ -63,7 +63,7 @@ func main() {
 	apiRouter.Put("/users", appConfig.updateUserHandler)
 	apiRouter.Post("/login", appConfig.loginUserHandler)
 	apiRouter.Post("/refresh", appConfig.refreshTokenHandler)
-	apiRouter.Post("revoke", appConfig.revokeRefreshTokenHandler)
+	apiRouter.Post("/revoke", appConfig.revokeRefreshTokenHandler)
 
 	adminRouter := chi.NewRouter()
 	adminRouter.Get("/metrics", appConfig.getNumOfHitsHandler)

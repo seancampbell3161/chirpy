@@ -152,7 +152,11 @@ func (db *DB) AddRevokedRefreshToken(tokenString string) error {
 }
 
 func (db *DB) createDB() error {
-	dbStructure := DBStructure{Chirps: make(map[int]Chirp), Users: make(map[int]User)}
+	dbStructure := DBStructure{
+		Chirps:        make(map[int]Chirp),
+		Users:         make(map[int]User),
+		RevokedTokens: make(map[string]time.Time),
+	}
 	return db.writeDB(dbStructure)
 }
 

@@ -66,12 +66,12 @@ func RefreshAccessJWT(r *http.Request, secret string, user database.User, exp ti
 }
 
 func RevokeRefreshJWT(r *http.Request, secret string) (string, error) {
-	tokenString := r.Header.Get("Authorization")
+	tokenString := strings.Split(r.Header.Get("Authorization"), "Bearer ")[1]
 	token, err := jwt.ParseWithClaims(tokenString, &userClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("parse w claims", err)
 		return "", err
 	}
 	if iss, err := token.Claims.GetIssuer(); iss != "chirpy-refresh" {
