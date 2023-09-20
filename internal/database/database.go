@@ -151,6 +151,21 @@ func (db *DB) AddRevokedRefreshToken(tokenString string) error {
 	return nil
 }
 
+func (db *DB) GetRevokedRefreshToken(tokenString string) (string, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return "", err
+	}
+
+	for token, _ := range dbStructure.RevokedTokens {
+		if token == tokenString {
+			return token, nil
+		}
+	}
+
+	return "", errors.New("no matching token")
+}
+
 func (db *DB) createDB() error {
 	dbStructure := DBStructure{
 		Chirps:        make(map[int]Chirp),
