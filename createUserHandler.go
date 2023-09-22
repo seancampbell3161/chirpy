@@ -14,8 +14,9 @@ type userParams struct {
 }
 
 type userResponse struct {
-	Email string `json:"email"`
-	ID    int    `json:"id"`
+	Email       string `json:"email"`
+	ID          int    `json:"id"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +38,7 @@ func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) 
 	userParameters.Password = auth.GenerateHashedPassword(&userParameters.Password)
 
 	userResult, err := cfg.DB.CreateUser(userParameters.Email, userParameters.Password)
-	response := userResponse{userResult.Email, userResult.ID}
+	response := userResponse{userResult.Email, userResult.ID, userResult.IsChirpyRed}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	data, err := json.Marshal(response)

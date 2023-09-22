@@ -25,9 +25,10 @@ type Chirp struct {
 }
 
 type User struct {
-	Password string `json:"password"`
-	Email    string `json:"email"`
-	ID       int    `json:"id"`
+	Password    string `json:"password"`
+	Email       string `json:"email"`
+	ID          int    `json:"id"`
+	IsChirpyRed bool   `json:"is_chirpy_red"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -51,7 +52,7 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 	}
 
 	id := len(dbStructure.Users) + 1
-	user := User{password, email, id}
+	user := User{password, email, id, false}
 	dbStructure.Users[id] = user
 	err = db.writeDB(dbStructure)
 	if err != nil {
@@ -97,6 +98,25 @@ func (db *DB) UpdateUser(userID int, updatedEmail string, updatedPassword string
 			user.Email = updatedEmail
 			user.Password = updatedPassword
 
+			dbStructure.Users[userID] = user
+			err = db.writeDB(dbStructure)
+			if err != nil {
+				return User{}, err
+			}
+			return user, nil
+		}
+	}
+	return User{}, err
+}
+
+func (db *DB) UpdateUserMembership(userID int) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+	for _, user := range dbStructure.Users {
+		if user.ID == userID {
+			user.IsChirpyRed = true
 			dbStructure.Users[userID] = user
 			err = db.writeDB(dbStructure)
 			if err != nil {

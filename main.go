@@ -60,11 +60,15 @@ func main() {
 	apiRouter.Get("/chirps/{chirpID}", appConfig.getChirpHandler)
 	apiRouter.Post("/chirps", appConfig.newChirpHandler)
 	apiRouter.Delete("/chirps/{chirpID}", appConfig.deleteChirpHandler)
+
 	apiRouter.Post("/users", appConfig.createUserHandler)
 	apiRouter.Put("/users", appConfig.updateUserHandler)
 	apiRouter.Post("/login", appConfig.loginUserHandler)
+
 	apiRouter.Post("/refresh", appConfig.refreshTokenHandler)
 	apiRouter.Post("/revoke", appConfig.revokeRefreshTokenHandler)
+
+	apiRouter.Post("/polka/webhooks", appConfig.polkaWebhookHandler)
 
 	adminRouter := chi.NewRouter()
 	adminRouter.Get("/metrics", appConfig.getNumOfHitsHandler)

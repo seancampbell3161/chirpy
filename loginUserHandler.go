@@ -16,6 +16,7 @@ type userParameters struct {
 type userLoginResponse struct {
 	Email        string `json:"email"`
 	ID           int    `json:"id"`
+	IsChirpyRed  bool   `json:"is_chirpy_red"`
 	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
 }
@@ -49,7 +50,13 @@ func (cfg *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		response := userLoginResponse{user.Email, user.ID, accessToken, refreshToken}
+		response := userLoginResponse{
+			user.Email,
+			user.ID,
+			user.IsChirpyRed,
+			accessToken,
+			refreshToken,
+		}
 		data, err := json.Marshal(response)
 		if err != nil {
 			fmt.Println(err)
