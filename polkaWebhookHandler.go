@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type polkaEvent struct {
@@ -16,6 +17,16 @@ type polkaData struct {
 }
 
 func (cfg *apiConfig) polkaWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	apiKey := r.Header.Get("Authorization")
+	if len(apiKey) == 0 {
+		w.WriteHeader(401)
+		return
+	}
+	if strings.Split(apiKey, "ApiKey ")[1] != cfg.PolkaApiKey {
+		w.WriteHeader(401)
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	polka := polkaEvent{}
 	err := decoder.Decode(&polka)

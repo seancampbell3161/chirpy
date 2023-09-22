@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileServerHits int
 	DB             *database.DB
 	JwtSecret      string
+	PolkaApiKey    string
 	AccessExp      time.Duration
 	RefreshExp     time.Duration
 }
@@ -40,11 +41,13 @@ func main() {
 		return
 	}
 	jwtSecret := os.Getenv("JWT_SECRET")
+	polkaApiKey := os.Getenv("POLKA_API_KEY")
 
 	appConfig := apiConfig{
 		fileServerHits: 0,
 		DB:             db,
 		JwtSecret:      jwtSecret,
+		PolkaApiKey:    polkaApiKey,
 		AccessExp:      time.Hour,
 		RefreshExp:     time.Hour * 24 * 60,
 	}
