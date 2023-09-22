@@ -59,6 +59,7 @@ func main() {
 	apiRouter.Get("/chirps", appConfig.getChirpsHandler)
 	apiRouter.Get("/chirps/{chirpID}", appConfig.getChirpHandler)
 	apiRouter.Post("/chirps", appConfig.newChirpHandler)
+	apiRouter.Delete("/chirps/{chirpID}", appConfig.deleteChirpHandler)
 	apiRouter.Post("/users", appConfig.createUserHandler)
 	apiRouter.Put("/users", appConfig.updateUserHandler)
 	apiRouter.Post("/login", appConfig.loginUserHandler)

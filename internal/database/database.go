@@ -19,8 +19,9 @@ type DBStructure struct {
 }
 
 type Chirp struct {
-	Body string `json:"body"`
-	ID   int    `json:"id"`
+	Body     string `json:"body"`
+	ID       int    `json:"id"`
+	AuthorID int    `json:"author_id"`
 }
 
 type User struct {
@@ -107,13 +108,13 @@ func (db *DB) UpdateUser(userID int, updatedEmail string, updatedPassword string
 	return User{}, err
 }
 
-func (db *DB) CreateChirp(msg string) (Chirp, error) {
+func (db *DB) CreateChirp(msg string, authorID int) (Chirp, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
 		return Chirp{}, err
 	}
 	id := len(dbStructure.Chirps) + 1
-	chirp := Chirp{msg, id}
+	chirp := Chirp{msg, id, authorID}
 	dbStructure.Chirps[id] = chirp
 
 	err = db.writeDB(dbStructure)
@@ -132,10 +133,35 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 
 	var chirps []Chirp
 	for _, v := range structure.Chirps {
-		chirps = append(chirps, Chirp{v.Body, v.ID})
+		chirps = append(chirps, Chirp{v.Body, v.ID, v.AuthorID})
 	}
 
 	return chirps, nil
+}
+
+func (db *DB) DeleteChirp(chirpID int, userID int) error {
+	structure, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	isFound := false
+	for key, value := range structure.Chirps {
+		if value.ID == chirpID && value.AuthorID == userID {
+			isFound = true
+			delete(structure.Chirps, key)
+			err := db.writeDB(structure)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+	if !isFound {
+		return errors.New("chirp not found")
+	}
+
+	return nil
 }
 
 func (db *DB) AddRevokedRefreshToken(tokenString string) error {

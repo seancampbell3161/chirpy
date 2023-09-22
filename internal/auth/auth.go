@@ -99,7 +99,7 @@ func ValidateJWT(r *http.Request, secret string, tokenIssuer string) (int, error
 	if err != nil {
 		fmt.Println("Get token issuer: ", err)
 	}
-	if issuer != "chirpy-access" {
+	if issuer != tokenIssuer {
 		return 0, errors.New("invalid issuer")
 	}
 
