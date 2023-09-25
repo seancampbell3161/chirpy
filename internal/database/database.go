@@ -3,7 +3,9 @@ package database
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -145,17 +147,29 @@ func (db *DB) CreateChirp(msg string, authorID int) (Chirp, error) {
 	return chirp, nil
 }
 
-func (db *DB) GetChirps() ([]Chirp, error) {
+func (db *DB) GetChirps(authorID *string) ([]Chirp, error) {
 	structure, err := db.loadDB()
 	if err != nil {
 		return nil, err
 	}
 
 	var chirps []Chirp
-	for _, v := range structure.Chirps {
-		chirps = append(chirps, Chirp{v.Body, v.ID, v.AuthorID})
+	if len(*authorID) > 0 {
+		authIDInt, err := strconv.Atoi(*authorID)
+		if err != nil {
+			fmt.Println(err)
+			return []Chirp{}, err
+		}
+		for _, v := range structure.Chirps {
+			if v.AuthorID == authIDInt {
+				chirps = append(chirps, Chirp{v.Body, v.ID, v.AuthorID})
+			}
+		}
+	} else {
+		for _, v := range structure.Chirps {
+			chirps = append(chirps, Chirp{v.Body, v.ID, v.AuthorID})
+		}
 	}
-
 	return chirps, nil
 }
 

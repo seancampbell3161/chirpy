@@ -4,18 +4,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 )
 
-func (cfg *apiConfig) getChirpsHandler(writer http.ResponseWriter, req *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	chirps, err := cfg.DB.GetChirps()
+func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	authID := r.URL.Query().Get("author_id")
+	sortParam := r.URL.Query().Get("sort")
+
+	chirps, err := cfg.DB.GetChirps(&authID)
 	if err != nil {
-		writer.WriteHeader(500)
+		w.WriteHeader(500)
 		fmt.Print(err)
 	}
-	writer.WriteHeader(200)
+
+	if sortParam == "asc" {
+		sort.SliceStable(chirps, func(i, j int) bool {
+			return chirps[i].ID < chirps[j].ID
+		})
+	} else if sortParam == "desc" {
+		sort.SliceStable(chirps, func(i, j int) bool {
+			return chirps[i].ID > chirps[j].ID
+		})
+	}
+	w.WriteHeader(200)
 	data, err := json.Marshal(chirps)
-	_, err = writer.Write(data)
+	_, err = w.Write(data)
 	if err != nil {
 		return
 	}

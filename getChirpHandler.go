@@ -11,8 +11,9 @@ func (cfg *apiConfig) getChirpHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	id := chi.URLParam(r, "chirpID")
 
+	authID := ""
 	if num, err := strconv.Atoi(id); err == nil {
-		chirps, err := cfg.DB.GetChirps()
+		chirps, err := cfg.DB.GetChirps(&authID)
 		if err != nil {
 			w.WriteHeader(500)
 		}
